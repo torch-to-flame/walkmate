@@ -1,0 +1,51 @@
+# Learn more https://docs.github.com/en/get-started/getting-started-with-git/ignoring-files
+
+# dependencies
+node_modules/
+
+# Expo
+.expo/
+dist/
+web-build/
+expo-env.d.ts
+
+# Native
+*.orig.*
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+
+# Generated native directories
+/ios/
+/android/
+
+# Metro
+.metro-health-check*
+
+# debug
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+
+# macOS
+.DS_Store
+*.pem
+
+# local env files
+.env*.local
+
+# typescript
+*.tsbuildinfo
+
+# Android and iOS builds
+*.apk
+*.ipa
+
+firebase-debug.log
+firestore-debug.log
+
+# Firebase credentials
+functions/walkmate-d42b4-firebase-adminsdk-fbsvc-909bb7fa19.json
+*-firebase-adminsdk-*.json

@@ -1,0 +1,56 @@
+{
+  "name": "walkmate",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "start": "expo start",
+    "android": "expo run:android",
+    "ios": "expo run:ios",
+    "prebuild": "npx expo prebuild --clean",
+    "promote-user": "cd functions && NODE_ENV=production npm run set-admin-access:promote",
+    "demote-user": "cd functions && NODE_ENV=production npm run set-admin-access:demote",
+    "promote-user:dev": "cd functions && NODE_ENV=development npm run set-admin-access:promote",
+    "demote-user:dev": "cd functions && NODE_ENV=development npm run set-admin-access:demote",
+    "set-admin-access": "cd functions && npm run set-admin-access"
+  },
+  "dependencies": {
+    "@expo/vector-icons": "^14.0.4",
+    "@react-native-community/datetimepicker": "^8.3.0",
+    "@react-native-firebase/app": "^21.12.0",
+    "@react-native-firebase/auth": "^21.12.0",
+    "@react-native-firebase/crashlytics": "^21.12.0",
+    "@react-native-firebase/firestore": "^21.12.0",
+    "@react-native-firebase/functions": "^21.12.0",
+    "@react-native-firebase/storage": "^21.12.0",
+    "date-fns": "^4.1.0",
+    "expo": "~52.0.37",
+    "expo-build-properties": "~0.13.2",
+    "expo-constants": "^17.0.7",
+    "expo-dev-client": "~5.0.12",
+    "expo-image-picker": "~16.0.6",
+    "expo-linear-gradient": "^14.0.2",
+    "expo-linking": "^7.0.5",
+    "expo-router": "^4.0.17",
+    "expo-status-bar": "~2.0.1",
+    "firebase": "^11.4.0",
+    "formik": "^2.4.6",
+    "lottie-react-native": "^7.2.2",
+    "react": "18.3.1",
+    "react-native": "0.76.7",
+    "react-native-get-random-values": "^1.10.0",
+    "react-native-google-places-autocomplete": "^2.5.7",
+    "react-native-safe-area-context": "^5.3.0",
+    "react-native-screens": "^4.9.1",
+    "yup": "^1.6.1"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.25.2",
+    "@types/react": "~18.3.12",
+    "typescript": "^5.3.3"
+  },
+  "private": true,
+  "overrides": {
+    "metro": "0.80.7",
+    "metro-resolver": "0.80.7"
+  }
+}
