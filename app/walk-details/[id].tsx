@@ -16,6 +16,16 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAuth } from "../../context/AuthContext";
 import { db } from "../../firebase";
 
+// App theme colors
+const COLORS = {
+  primary: "#4285F4",
+  background: "#f8f8f8",
+  card: "#ffffff",
+  text: "#333333",
+  textSecondary: "#666666",
+  border: "#e0e0e0",
+};
+
 interface Partner {
   id: string;
   name: string;
@@ -37,6 +47,12 @@ interface WalkDetails {
   durationMinutes: number;
   numberOfRotations: number;
   rotationPartners: RotationPartner[];
+  location?: {
+    name: string;
+    placeId: string;
+    latitude: number;
+    longitude: number;
+  };
 }
 
 export default function WalkDetailsScreen() {
@@ -123,6 +139,7 @@ export default function WalkDetailsScreen() {
           durationMinutes: walkData.durationMinutes || 60,
           numberOfRotations: walkData.numberOfRotations || 3,
           rotationPartners,
+          location: walkData.location,
         });
       } catch (error) {
         console.error("Error fetching walk details:", error);
@@ -153,10 +170,14 @@ export default function WalkDetailsScreen() {
     return colorMap[color] || "#457B9D"; // Default to steel blue if color not found
   };
 
+  const handleGoBack = () => {
+    router.back();
+  };
+
   if (authLoading || loading) {
     return (
-      <View style={styles.container}>
-        <ActivityIndicator size="large" color="#0000ff" />
+      <View style={[styles.container, styles.loadingContainer]}>
+        <ActivityIndicator size="large" color={COLORS.primary} />
       </View>
     );
   }
@@ -175,117 +196,99 @@ export default function WalkDetailsScreen() {
     );
   }
 
-  // Use the first rotation's color for the header background
-  const firstPartner = walkDetails.rotationPartners[0];
-  const backgroundColor = getEnhancedColor(firstPartner?.pairColor);
-
   return (
     <>
       <Stack.Screen
         options={{
           headerTitle: "Walk Details",
           headerStyle: {
-            backgroundColor,
+            backgroundColor: COLORS.card,
           },
-          headerTintColor: "white",
+          headerTintColor: COLORS.text,
           headerShadowVisible: false,
-          headerLeft: () => (
-            <TouchableOpacity onPress={() => router.goBack()}>
-              <Ionicons name="arrow-back" size={24} color="white" />
-            </TouchableOpacity>
-          ),
+          headerBackVisible: true,
+          headerBackTitle: "Back",
         }}
       />
+      <StatusBar style="auto" />
       <ScrollView
         style={styles.container}
         contentContainerStyle={styles.contentContainer}
       >
-        <StatusBar style="auto" />
-
-        <View
-          style={[styles.header, { backgroundColor, paddingTop: insets.top }]}
-        >
+        <View style={styles.card}>
           <Text style={styles.walkName}>{walkDetails.name}</Text>
-          <Text style={styles.date}>
-            {format(walkDetails.date, "MMMM d, yyyy")} at{" "}
+          <Text style={styles.dateTime}>
+            {format(walkDetails.date, "EEEE, MMMM d, yyyy")} at{" "}
             {format(walkDetails.date, "h:mm a")}
           </Text>
-          <Text style={styles.walkInfo}>
-            {walkDetails.durationMinutes} minutes • {walkDetails.numberOfRotations} rotations
+          
+          {walkDetails.location && (
+            <Text style={styles.location}>
+              <Ionicons name="location-outline" size={16} color={COLORS.textSecondary} /> {walkDetails.location.name}
+            </Text>
+          )}
+          
+          <Text style={styles.duration}>
+            <Ionicons name="time-outline" size={16} color={COLORS.textSecondary} /> {walkDetails.durationMinutes} minutes
           </Text>
+          
+          {walkDetails.numberOfRotations > 1 && (
+            <Text style={styles.rotations}>
+              <Ionicons name="swap-horizontal-outline" size={16} color={COLORS.textSecondary} /> {walkDetails.numberOfRotations} rotations
+            </Text>
+          )}
         </View>
 
-        <View style={styles.card}>
-          <Text style={styles.sectionTitle}>
-            Your Walking Partners
-            {walkDetails.rotationPartners.length > 1 ? " (All Rotations)" : ""}
-          </Text>
-
-          {walkDetails.rotationPartners.map((rotation, index) => (
-            <View key={rotation.pairId} style={styles.rotationContainer}>
-              {walkDetails.rotationPartners.length > 1 && (
-                <Text style={styles.rotationLabel}>
-                  Rotation {index + 1} of {walkDetails.rotationPartners.length}
-                </Text>
-              )}
-              
-              <View style={styles.pairInfoContainer}>
-                <View style={styles.pairInfo}>
-                  <View 
-                    style={[
-                      styles.pairNumber, 
-                      { backgroundColor: getEnhancedColor(rotation.pairColor) }
-                    ]}
-                  >
-                    <Text style={styles.pairNumberText}>
-                      {rotation.pairNumber}
-                    </Text>
-                  </View>
+        <View style={styles.partnersContainer}>
+          <Text style={styles.sectionTitle}>Your Walking Partners</Text>
+          
+          {walkDetails.rotationPartners.length === 0 ? (
+            <View style={styles.emptyState}>
+              <Text style={styles.emptyStateText}>You walked solo on this walk.</Text>
+            </View>
+          ) : (
+            walkDetails.rotationPartners.map((rotation, index) => (
+              <View
+                key={rotation.pairId}
+                style={[
+                  styles.partnerItem,
+                  index === walkDetails.rotationPartners.length - 1 && styles.partnerItem_last,
+                ]}
+              >
+                <View
+                  style={[
+                    styles.colorIndicator,
+                    { backgroundColor: getEnhancedColor(rotation.pairColor) },
+                  ]}
+                >
+                  <Text style={styles.pairNumber}>{rotation.pairNumber}</Text>
                 </View>
-              </View>
-
-              {rotation.partner ? (
                 <View style={styles.partnerInfo}>
-                  <View style={styles.partnerHeader}>
-                    {rotation.partner.profilePicUrl ? (
-                      <Image
-                        source={{ uri: rotation.partner.profilePicUrl }}
-                        style={styles.profilePic}
-                      />
-                    ) : (
-                      <View style={styles.profilePlaceholder}>
-                        <Text style={styles.profileInitial}>
-                          {rotation.partner.name.charAt(0).toUpperCase()}
+                  {rotation.partner ? (
+                    <>
+                      <Text style={styles.partnerName}>{rotation.partner.name}</Text>
+                      <Text style={styles.rotationText}>
+                        Rotation {rotation.pairNumber}
+                      </Text>
+                      {rotation.partner.aboutMe && (
+                        <Text style={styles.aboutMe}>
+                          {rotation.partner.aboutMe}
                         </Text>
-                      </View>
-                    )}
-                    <View style={styles.partnerNameContainer}>
-                      <Text style={styles.partnerName}>
-                        {rotation.partner.name}
-                      </Text>
-                    </View>
-                  </View>
-
-                  {rotation.partner.aboutMe && (
-                    <View style={styles.aboutMeContainer}>
-                      <Text style={styles.aboutMeLabel}>About</Text>
-                      <Text style={styles.aboutMeText}>
-                        {rotation.partner.aboutMe}
-                      </Text>
-                    </View>
+                      )}
+                    </>
+                  ) : (
+                    <Text style={styles.partnerName}>Solo Rotation</Text>
                   )}
                 </View>
-              ) : (
-                <Text style={styles.soloText}>
-                  You were on a solo walk for this rotation.
-                </Text>
-              )}
-              
-              {index < walkDetails.rotationPartners.length - 1 && (
-                <View style={styles.divider} />
-              )}
-            </View>
-          ))}
+                {rotation.partner?.profilePicUrl && (
+                  <Image
+                    source={{ uri: rotation.partner.profilePicUrl }}
+                    style={styles.profilePic}
+                  />
+                )}
+              </View>
+            ))
+          )}
         </View>
       </ScrollView>
     </>
@@ -295,148 +298,132 @@ export default function WalkDetailsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f5f5f5",
+    backgroundColor: COLORS.background,
   },
   contentContainer: {
-    paddingBottom: 30,
-  },
-  header: {
     padding: 20,
-    alignItems: "center",
-    justifyContent: "center",
+    paddingBottom: 40,
   },
-  walkName: {
-    fontSize: 20,
-    fontWeight: "bold",
-    color: "white",
-    marginBottom: 8,
-  },
-  date: {
-    fontSize: 16,
-    color: "rgba(255, 255, 255, 0.9)",
-    marginBottom: 4,
-  },
-  walkInfo: {
-    fontSize: 14,
-    color: "rgba(255, 255, 255, 0.8)",
+  loadingContainer: {
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   card: {
-    backgroundColor: "white",
+    backgroundColor: COLORS.card,
     borderRadius: 12,
     padding: 20,
-    margin: 16,
-    marginBottom: 8,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
+    marginBottom: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  walkName: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: COLORS.text,
+    marginBottom: 8,
+  },
+  dateTime: {
+    fontSize: 16,
+    color: COLORS.text,
+    marginBottom: 12,
+  },
+  location: {
+    fontSize: 16,
+    color: COLORS.textSecondary,
+    marginBottom: 8,
+  },
+  duration: {
+    fontSize: 16,
+    color: COLORS.textSecondary,
+    marginBottom: 8,
+  },
+  rotations: {
+    fontSize: 16,
+    color: COLORS.textSecondary,
+  },
+  partnersContainer: {
+    backgroundColor: COLORS.card,
+    borderRadius: 12,
+    padding: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
   },
   sectionTitle: {
     fontSize: 18,
-    fontWeight: "bold",
-    marginBottom: 16,
-    color: "#333",
-  },
-  rotationContainer: {
+    fontWeight: 'bold',
+    color: COLORS.text,
     marginBottom: 16,
   },
-  rotationLabel: {
-    fontSize: 14,
-    fontWeight: "bold",
-    color: "#666",
-    backgroundColor: "rgba(0, 0, 0, 0.05)",
-    paddingVertical: 4,
-    paddingHorizontal: 10,
-    borderRadius: 12,
-    alignSelf: "flex-start",
-    marginBottom: 12,
-  },
-  pairInfoContainer: {
-    alignItems: "center",
+  partnerItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
     marginBottom: 16,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
   },
-  pairInfo: {
-    alignItems: "center",
+  partnerItem_last: {
+    marginBottom: 0,
+    paddingBottom: 0,
+    borderBottomWidth: 0,
+  },
+  colorIndicator: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 16,
   },
   pairNumber: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 8,
-  },
-  pairNumberText: {
-    fontSize: 28,
-    fontWeight: "bold",
-    color: "white",
-  },
-  pairText: {
     fontSize: 16,
-    color: "#666",
+    fontWeight: 'bold',
+    color: 'white',
   },
   partnerInfo: {
-    marginBottom: 8,
-  },
-  partnerHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 16,
-  },
-  profilePic: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-  },
-  profilePlaceholder: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: "#E0E0E0",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  profileInitial: {
-    fontSize: 24,
-    fontWeight: "bold",
-    color: "#4285F4",
-  },
-  partnerNameContainer: {
-    marginLeft: 16,
+    flex: 1,
   },
   partnerName: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "#333",
-  },
-  aboutMeContainer: {
-    marginTop: 8,
-  },
-  aboutMeLabel: {
-    fontSize: 14,
-    fontWeight: "bold",
-    color: "#666",
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: COLORS.text,
     marginBottom: 4,
   },
-  aboutMeText: {
-    fontSize: 16,
-    color: "#333",
-    lineHeight: 22,
+  rotationText: {
+    fontSize: 14,
+    color: COLORS.textSecondary,
+    marginBottom: 4,
   },
-  soloText: {
+  aboutMe: {
+    fontSize: 14,
+    color: COLORS.textSecondary,
+    fontStyle: 'italic',
+  },
+  profilePic: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    marginLeft: 16,
+  },
+  emptyState: {
+    padding: 20,
+    alignItems: 'center',
+  },
+  emptyStateText: {
     fontSize: 16,
-    color: "#666",
-    fontStyle: "italic",
+    color: COLORS.textSecondary,
+    textAlign: 'center',
   },
   errorText: {
     fontSize: 16,
-    color: "#666",
-    textAlign: "center",
-  },
-  divider: {
-    height: 1,
-    backgroundColor: "#eee",
-    marginVertical: 16,
+    color: COLORS.textSecondary,
+    textAlign: 'center',
+    padding: 20,
   },
 });

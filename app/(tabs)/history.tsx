@@ -5,6 +5,17 @@ import { StatusBar } from 'expo-status-bar';
 import { useAuth } from '../../context/AuthContext';
 import { db } from '../../firebase';
 import { format } from 'date-fns';
+import { Ionicons } from '@expo/vector-icons';
+
+// App theme colors
+const COLORS = {
+  primary: "#4285F4",
+  background: "#f8f8f8",
+  card: "#ffffff",
+  text: "#333333",
+  textSecondary: "#666666",
+  border: "#e0e0e0",
+};
 
 interface HistoryWalk {
   id: string;
@@ -117,24 +128,15 @@ export default function HistoryScreen() {
     fetchPastWalks();
   }, [user]);
 
-  const navigateToWalkDetails = (walk: HistoryWalk) => {
-    router.push({
-      pathname: '/walk-details/[id]',
-      params: { id: walk.id }
-    });
+  const navigateToWalkDetails = (walkId: string) => {
+    router.push(`/walk-details/${walkId}`);
   };
 
   const renderWalkItem = ({ item }: { item: HistoryWalk }) => {
-    // Get a comma-separated list of partner names
-    const partnerNames = item.partners.map(p => p.name).join(', ');
-    
-    // Use the first color and pair number for the display (we'll show all in the details)
-    const primaryColor = item.colors[0] || 'blue';
-    
     return (
       <TouchableOpacity 
         style={styles.walkItem} 
-        onPress={() => navigateToWalkDetails(item)}
+        onPress={() => navigateToWalkDetails(item.id)}
       >
         <View style={styles.walkDate}>
           <Text style={styles.dateText}>{format(item.date, 'MMM d')}</Text>
@@ -148,9 +150,9 @@ export default function HistoryScreen() {
             {format(item.date, 'h:mm a')} • {item.durationMinutes} min
           </Text>
           <Text style={styles.partnerText}>
-            {item.partners.length > 1 
-              ? `Partners: ${partnerNames}`
-              : `Partner: ${partnerNames}`
+            {item.partners[0].id === 'solo' 
+              ? 'Solo walk'
+              : `You walked with ${item.partners.length} ${item.partners.length === 1 ? 'person' : 'people'}`
             }
           </Text>
           {item.pairNumbers.length > 1 && (
@@ -159,38 +161,17 @@ export default function HistoryScreen() {
             </Text>
           )}
         </View>
-        <View style={[styles.colorIndicator, { backgroundColor: getEnhancedColor(primaryColor) }]}>
-          {item.pairNumbers.length > 1 && (
-            <Text style={styles.rotationCount}>{item.pairNumbers.length}</Text>
-          )}
+        <View style={styles.iconContainer}>
+          <Ionicons name="chevron-forward" size={20} color={COLORS.textSecondary} />
         </View>
       </TouchableOpacity>
     );
   };
 
-  // Get a more aesthetically pleasing color based on the assigned color
-  const getEnhancedColor = (color?: string) => {
-    if (!color) return '#457B9D';
-    
-    // Define nicer color palette with better contrast
-    const colorMap: Record<string, string> = {
-      'yellow': '#F9D949', // Softer yellow
-      'red': '#E76F51',    // Coral red
-      'blue': '#457B9D',   // Steel blue
-      'green': '#2A9D8F',  // Teal green
-      'purple': '#9B5DE5', // Lavender
-      'orange': '#F4A261', // Light orange
-      'pink': '#E07A5F',   // Terra cotta
-      'cyan': '#48CAE4',   // Sky blue
-    };
-    
-    return colorMap[color] || '#457B9D'; // Default to steel blue if color not found
-  };
-
   if (authLoading || loading) {
     return (
-      <View style={styles.container}>
-        <ActivityIndicator size="large" color="#0000ff" />
+      <View style={[styles.container, styles.loadingContainer]}>
+        <ActivityIndicator size="large" color={COLORS.primary} />
       </View>
     );
   }
@@ -202,7 +183,9 @@ export default function HistoryScreen() {
   return (
     <View style={styles.container}>
       <StatusBar style="auto" />
-      <Text style={styles.title}>Your Walk History</Text>
+      <View style={styles.header}>
+        <Text style={styles.title}>Your Walk History</Text>
+      </View>
       
       {pastWalks.length === 0 ? (
         <View style={styles.emptyState}>
@@ -224,21 +207,31 @@ export default function HistoryScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
-    padding: 20,
+    backgroundColor: COLORS.background,
+  },
+  loadingContainer: {
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  header: {
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+    backgroundColor: COLORS.card,
   },
   title: {
-    fontSize: 24,
+    fontSize: 22,
     fontWeight: 'bold',
-    marginBottom: 20,
-    color: '#333',
+    color: COLORS.text,
   },
   listContainer: {
-    paddingBottom: 20,
+    padding: 20,
+    paddingBottom: 40,
   },
   walkItem: {
     flexDirection: 'row',
-    backgroundColor: '#f8f9fa',
+    backgroundColor: COLORS.card,
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
@@ -257,11 +250,11 @@ const styles = StyleSheet.create({
   dateText: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#333',
+    color: COLORS.text,
   },
   yearText: {
     fontSize: 14,
-    color: '#666',
+    color: COLORS.textSecondary,
   },
   walkInfo: {
     flex: 1,
@@ -269,45 +262,38 @@ const styles = StyleSheet.create({
   walkTitle: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#333',
+    color: COLORS.text,
     marginBottom: 4,
   },
   timeText: {
     fontSize: 14,
-    color: '#666',
+    color: COLORS.textSecondary,
     marginBottom: 4,
   },
   partnerText: {
     fontSize: 14,
-    color: '#666',
+    color: COLORS.textSecondary,
     marginBottom: 2,
   },
   rotationsText: {
     fontSize: 12,
-    color: '#888',
+    color: COLORS.textSecondary,
     fontStyle: 'italic',
   },
-  colorIndicator: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    marginLeft: 12,
+  iconContainer: {
+    marginLeft: 8,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  rotationCount: {
-    fontSize: 12,
-    fontWeight: 'bold',
-    color: 'white',
   },
   emptyState: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    padding: 20,
   },
   emptyStateText: {
     fontSize: 16,
-    color: '#666',
+    color: COLORS.textSecondary,
     textAlign: 'center',
   },
 });

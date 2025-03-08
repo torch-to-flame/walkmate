@@ -11,7 +11,9 @@
     "demote-user": "cd functions && NODE_ENV=production npm run set-admin-access:demote",
     "promote-user:dev": "cd functions && NODE_ENV=development npm run set-admin-access:promote",
     "demote-user:dev": "cd functions && NODE_ENV=development npm run set-admin-access:demote",
-    "set-admin-access": "cd functions && npm run set-admin-access"
+    "set-admin-access": "cd functions && npm run set-admin-access",
+    "build:prune-artifacts": "scripts/prune-artifacts.sh",
+    "build:ios:production": "NODE_ENV=production eas build -p ios --local --profile production && npm run build:prune-artifacts",
   },
   "dependencies": {
     "@expo/vector-icons": "^14.0.4",
@@ -22,6 +24,7 @@
     "@react-native-firebase/firestore": "^21.12.0",
     "@react-native-firebase/functions": "^21.12.0",
     "@react-native-firebase/storage": "^21.12.0",
+    "@react-native-picker/picker": "^2.11.0",
     "date-fns": "^4.1.0",
     "expo": "~52.0.37",
     "expo-build-properties": "~0.13.2",

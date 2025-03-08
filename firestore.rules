@@ -33,6 +33,27 @@ service cloud.firestore {
       allow create, update, delete: if isAdmin();
     }
     
+    // RSVPs collection rules
+    match /rsvps/{rsvpId} {
+      // Users can read all RSVPs
+      // Users can only create/update/delete their own RSVPs
+      allow read: if isAuthenticated();
+      allow create, update: if isAuthenticated() && 
+        (request.resource.data.userId == request.auth.uid || isAdmin());
+      allow delete: if isAuthenticated() && 
+        (resource.data.userId == request.auth.uid || isAdmin());
+    }
+    
+    // Reminders collection rules
+    match /reminders/{reminderId} {
+      // Users can read their own reminders
+      // Cloud functions handle creating/updating reminders
+      // Users can delete their own reminders
+      allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      allow create, update: if isAdmin(); // Only admin or cloud functions
+      allow delete: if isAuthenticated() && resource.data.userId == request.auth.uid;
+    }
+    
     // Default deny
     match /{document=**} {
       allow read, write: if false;

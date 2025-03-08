@@ -32,6 +32,7 @@ export default function RootLayout() {
               name="walk-details/[id]"
               options={{
                 title: "Walk Details",
+                headerShown: true,
               }}
             />
             <Stack.Screen

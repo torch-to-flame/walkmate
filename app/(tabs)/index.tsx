@@ -7,17 +7,27 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  TouchableOpacity,
   View,
 } from "react-native";
 import WalkingCharacters from "../../components/WalkingCharacters";
+import UpcomingWalks from "../../components/UpcomingWalks";
+import WalkCard from "../../components/WalkCard";
 import { useAuth } from "../../context/AuthContext";
 import { useWalk } from "../../context/WalkContext";
+
+// App theme colors
+const COLORS = {
+  primary: "#4285F4",
+  background: "#f8f8f8",
+  card: "#ffffff",
+  text: "#333333",
+  textSecondary: "#666666",
+};
 
 export default function TabsHomeScreen() {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
-  const { currentWalk, loading: walkLoading, joinWalk } = useWalk();
+  const { currentWalk, loading: walkLoading } = useWalk();
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -25,21 +35,10 @@ export default function TabsHomeScreen() {
     }
   }, [user, authLoading, router]);
 
-  const handleJoinWalk = async () => {
-    try {
-      if (currentWalk) {
-        await joinWalk(currentWalk.id);
-        router.push("/(tabs)/walk");
-      }
-    } catch (error) {
-      console.error("Error joining walk:", error);
-    }
-  };
-
   if (authLoading || walkLoading) {
     return (
-      <View style={styles.container}>
-        <ActivityIndicator size="large" color="#0000ff" />
+      <View style={[styles.container, styles.loadingContainer]}>
+        <ActivityIndicator size="large" color={COLORS.primary} />
       </View>
     );
   }
@@ -61,13 +60,13 @@ export default function TabsHomeScreen() {
         {currentWalk ? (
           <View style={styles.walkContainer}>
             <Text style={styles.subtitle}>There's a walk in progress!</Text>
-            <TouchableOpacity style={styles.button} onPress={handleJoinWalk}>
-              <Text style={styles.buttonText}>Join Walk</Text>
-            </TouchableOpacity>
+            <WalkCard walk={currentWalk} showRSVPButton={false} />
           </View>
         ) : (
           <Text style={styles.subtitle}>No active walks at the moment.</Text>
         )}
+
+        <UpcomingWalks />
 
         <View style={styles.howItWorksContainer}>
           <Text style={styles.sectionTitle}>How It Works</Text>
@@ -103,43 +102,23 @@ export default function TabsHomeScreen() {
               <Text style={styles.stepNumber}>3</Text>
             </View>
             <View style={styles.stepContent}>
-              <Text style={styles.stepTitle}>Meet New People</Text>
+              <Text style={styles.stepTitle}>Walk & Talk</Text>
               <Text style={styles.stepDescription}>
-                Get paired with interesting people to chat with while walking.
-                Partners rotate throughout the walk.
+                Enjoy a walk with your partner. Every 15 minutes, you'll be
+                matched with someone new.
               </Text>
             </View>
           </View>
-
-          <View style={styles.stepContainer}>
-            <View style={styles.stepNumberContainer}>
-              <Text style={styles.stepNumber}>4</Text>
-            </View>
-            <View style={styles.stepContent}>
-              <Text style={styles.stepTitle}>Expand Your Network</Text>
-              <Text style={styles.stepDescription}>
-                Meet the whole group instead of sticking with people you already
-                know. Make meaningful connections!
-              </Text>
-            </View>
-          </View>
-
-          <View style={styles.spacer} />
         </View>
       </ScrollView>
 
       <LinearGradient
-        locations={[0, 0.2, 1]}
-        colors={[
-          "rgba(255,255,255,0)",
-          "rgba(255,255,255,0.9)",
-          "rgba(255,255,255,1)",
-        ]}
-        style={styles.gradient}
+        colors={["rgba(255,255,255,0)", "rgba(255,255,255,1)"]}
+        style={styles.bottomGradient}
       />
 
-      <View style={styles.animationsContainer}>
-        <WalkingCharacters style={{ marginTop: 25 }} />
+      <View style={styles.animationContainer}>
+        <WalkingCharacters />
       </View>
     </View>
   );
@@ -148,14 +127,17 @@ export default function TabsHomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#fff",
+    backgroundColor: COLORS.background,
+  },
+  loadingContainer: {
+    justifyContent: "center",
+    alignItems: "center",
   },
   scrollView: {
     flex: 1,
     width: "100%",
   },
   scrollViewContent: {
-    alignItems: "center",
     paddingTop: 40,
     paddingHorizontal: 20,
     paddingBottom: 180, // Add extra padding at the bottom for the gradient and animations
@@ -165,52 +147,41 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     marginBottom: 20,
     textAlign: "center",
+    color: COLORS.text,
   },
   subtitle: {
     fontSize: 18,
     marginBottom: 20,
     textAlign: "center",
+    color: COLORS.textSecondary,
   },
   walkContainer: {
     alignItems: "center",
     marginBottom: 30,
   },
-  button: {
-    backgroundColor: "#4285F4",
-    paddingVertical: 12,
-    paddingHorizontal: 30,
-    borderRadius: 8,
-    marginVertical: 10,
-  },
-  buttonText: {
-    color: "white",
-    fontSize: 16,
-    fontWeight: "bold",
-  },
   howItWorksContainer: {
     width: "100%",
     marginTop: 20,
+    marginBottom: 40,
   },
   sectionTitle: {
-    fontSize: 22,
+    fontSize: 20,
     fontWeight: "bold",
     marginBottom: 20,
-    textAlign: "center",
+    color: COLORS.text,
   },
   stepContainer: {
     flexDirection: "row",
     marginBottom: 20,
-    alignItems: "flex-start",
   },
   stepNumberContainer: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: "#4285F4",
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: COLORS.primary,
     justifyContent: "center",
     alignItems: "center",
-    marginRight: 14,
-    marginTop: 2,
+    marginRight: 16,
   },
   stepNumber: {
     color: "white",
@@ -222,30 +193,29 @@ const styles = StyleSheet.create({
   },
   stepTitle: {
     fontSize: 18,
-    fontWeight: "600",
-    marginBottom: 6,
+    fontWeight: "bold",
+    marginBottom: 8,
+    color: COLORS.text,
   },
   stepDescription: {
     fontSize: 16,
     lineHeight: 22,
-    color: "#555",
+    color: COLORS.textSecondary,
   },
-  spacer: {
-    height: 30,
-  },
-  gradient: {
+  bottomGradient: {
     position: "absolute",
     bottom: 0,
     left: 0,
     right: 0,
-    height: 180,
-    zIndex: 1,
+    height: 120,
   },
-  animationsContainer: {
-    width: "100%",
+  animationContainer: {
     position: "absolute",
     bottom: 0,
-    zIndex: 2,
+    left: 0,
+    right: 0,
     height: 120,
+    justifyContent: "flex-end",
+    alignItems: "center",
   },
 });

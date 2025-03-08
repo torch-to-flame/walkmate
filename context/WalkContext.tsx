@@ -6,13 +6,15 @@ import React, {
   useState,
 } from "react";
 import { db } from "../firebase";
-import { Pair, User, Walk } from "../types";
+import { Pair, User, Walk, Reminder } from "../types";
 import { useAuth } from "./AuthContext";
 
 interface WalkContextType {
   currentWalk: Walk | null;
+  upcomingWalks: Walk[];
   userPair: Pair | null;
   loading: boolean;
+  userRSVPs: string[]; // Array of walk IDs the user has RSVPed to
   createWalk: (walkData?: {
     location?: {
       name: string;
@@ -23,10 +25,14 @@ interface WalkContextType {
     date?: Date;
     durationMinutes?: number;
     numberOfRotations?: number;
+    organizer?: string;
   }) => Promise<void>;
   joinWalk: (walkId: string) => Promise<void>;
   rotatePairs: () => Promise<void>;
   checkIn: (walkId: string) => Promise<void>;
+  rsvpForWalk: (walkId: string) => Promise<void>;
+  cancelRSVP: (walkId: string) => Promise<void>;
+  hasUserRSVPed: (walkId: string) => boolean;
 }
 
 const WalkContext = createContext<WalkContextType | undefined>(undefined);
@@ -65,19 +71,24 @@ interface WalkProviderProps {
 
 export const WalkProvider: React.FC<WalkProviderProps> = ({ children }) => {
   const [currentWalk, setCurrentWalk] = useState<Walk | null>(null);
+  const [upcomingWalks, setUpcomingWalks] = useState<Walk[]>([]);
   const [userPair, setUserPair] = useState<Pair | null>(null);
+  const [userRSVPs, setUserRSVPs] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const { user } = useAuth();
 
   useEffect(() => {
     if (!user) {
       setCurrentWalk(null);
+      setUpcomingWalks([]);
       setUserPair(null);
+      setUserRSVPs([]);
       setLoading(false);
       return;
     }
 
-    const unsubscribe = db
+    // Subscribe to active walk
+    const activeWalkUnsubscribe = db
       .collection("walks")
       .where("active", "==", true)
       .limit(1)
@@ -89,6 +100,7 @@ export const WalkProvider: React.FC<WalkProviderProps> = ({ children }) => {
             id: doc.id,
             ...walkData,
             date: walkData.date.toDate(),
+            lastRotationTime: walkData.lastRotationTime ? walkData.lastRotationTime.toDate() : undefined,
           };
           setCurrentWalk(walk);
 
@@ -99,10 +111,49 @@ export const WalkProvider: React.FC<WalkProviderProps> = ({ children }) => {
           setCurrentWalk(null);
           setUserPair(null);
         }
+      });
+
+    // Subscribe to upcoming walks
+    const now = new Date();
+    const upcomingWalksUnsubscribe = db
+      .collection("walks")
+      .where("active", "==", false)
+      .where("date", ">", now)
+      .orderBy("date", "asc")
+      .limit(10)
+      .onSnapshot((querySnapshot) => {
+        const walks: Walk[] = [];
+        querySnapshot.forEach((doc) => {
+          const walkData = doc.data();
+          walks.push({
+            id: doc.id,
+            ...walkData,
+            date: walkData.date.toDate(),
+            lastRotationTime: walkData.lastRotationTime ? walkData.lastRotationTime.toDate() : undefined,
+          });
+        });
+        setUpcomingWalks(walks);
+      });
+
+    // Get user's RSVPs
+    const userRSVPsUnsubscribe = db
+      .collection("rsvps")
+      .where("userId", "==", user.id)
+      .onSnapshot((querySnapshot) => {
+        const rsvpWalkIds: string[] = [];
+        querySnapshot.forEach((doc) => {
+          const rsvpData = doc.data();
+          rsvpWalkIds.push(rsvpData.walkId);
+        });
+        setUserRSVPs(rsvpWalkIds);
         setLoading(false);
       });
 
-    return () => unsubscribe();
+    return () => {
+      activeWalkUnsubscribe();
+      upcomingWalksUnsubscribe();
+      userRSVPsUnsubscribe();
+    };
   }, [user]);
 
   const createWalk = async (walkData?: {
@@ -115,6 +166,7 @@ export const WalkProvider: React.FC<WalkProviderProps> = ({ children }) => {
     date?: Date;
     durationMinutes?: number;
     numberOfRotations?: number;
+    organizer?: string;
   }) => {
     if (!user?.isAdmin) {
       throw new Error("Only admins can create walks");
@@ -177,6 +229,8 @@ export const WalkProvider: React.FC<WalkProviderProps> = ({ children }) => {
         numberOfRotations: walkData?.numberOfRotations || 3, // Default to 3 rotations
         lastRotationTime: new Date(), // Set initial rotation time to now
         currentRotation: 0, // Start with 0 rotations
+        rsvpUsers: [],
+        organizer: walkData?.organizer || user?.name || "Admin", // Set the organizer
       });
     } catch (error) {
       console.error("Error creating walk:", error);
@@ -328,14 +382,122 @@ export const WalkProvider: React.FC<WalkProviderProps> = ({ children }) => {
     }
   };
 
+  const rsvpForWalk = async (walkId: string) => {
+    try {
+      if (!user) {
+        throw new Error("User not authenticated");
+      }
+
+      // Check if walk exists
+      const walkDoc = await db.collection("walks").doc(walkId).get();
+      if (!walkDoc.exists) {
+        throw new Error("Walk not found");
+      }
+
+      // Create RSVP document
+      const rsvpId = `${user.id}_${walkId}`;
+      await db.collection("rsvps").doc(rsvpId).set({
+        userId: user.id,
+        walkId: walkId,
+        timestamp: new Date(),
+      });
+
+      // Update walk document with new RSVP user
+      const walkData = walkDoc.data() as Walk;
+      const rsvpUsers = walkData.rsvpUsers || [];
+      if (!rsvpUsers.includes(user.id)) {
+        await walkDoc.ref.update({
+          rsvpUsers: [...rsvpUsers, user.id],
+        });
+      }
+
+      // Schedule reminders
+      const walkDate = walkData.date.toDate ? walkData.date.toDate() : walkData.date;
+      
+      // Schedule day before reminder
+      const dayBeforeDate = new Date(walkDate);
+      dayBeforeDate.setDate(dayBeforeDate.getDate() - 1);
+      await db.collection("reminders").add({
+        userId: user.id,
+        walkId: walkId,
+        type: 'day_before',
+        scheduledFor: dayBeforeDate,
+        sent: false,
+      });
+
+      // Schedule hour before reminder
+      const hourBeforeDate = new Date(walkDate);
+      hourBeforeDate.setHours(hourBeforeDate.getHours() - 1);
+      await db.collection("reminders").add({
+        userId: user.id,
+        walkId: walkId,
+        type: 'hour_before',
+        scheduledFor: hourBeforeDate,
+        sent: false,
+      });
+
+      console.log(`User ${user.id} RSVPed for walk ${walkId}`);
+    } catch (error) {
+      console.error("Error RSVPing for walk:", error);
+      throw error;
+    }
+  };
+
+  const cancelRSVP = async (walkId: string) => {
+    try {
+      if (!user) {
+        throw new Error("User not authenticated");
+      }
+
+      // Delete RSVP document
+      const rsvpId = `${user.id}_${walkId}`;
+      await db.collection("rsvps").doc(rsvpId).delete();
+
+      // Update walk document to remove user from rsvpUsers
+      const walkDoc = await db.collection("walks").doc(walkId).get();
+      if (walkDoc.exists) {
+        const walkData = walkDoc.data() as Walk;
+        const rsvpUsers = walkData.rsvpUsers || [];
+        await walkDoc.ref.update({
+          rsvpUsers: rsvpUsers.filter(id => id !== user.id),
+        });
+      }
+
+      // Delete scheduled reminders
+      const remindersSnapshot = await db
+        .collection("reminders")
+        .where("userId", "==", user.id)
+        .where("walkId", "==", walkId)
+        .where("sent", "==", false)
+        .get();
+
+      const deletePromises = remindersSnapshot.docs.map(doc => doc.ref.delete());
+      await Promise.all(deletePromises);
+
+      console.log(`User ${user.id} canceled RSVP for walk ${walkId}`);
+    } catch (error) {
+      console.error("Error canceling RSVP:", error);
+      throw error;
+    }
+  };
+
+  const hasUserRSVPed = (walkId: string) => {
+    return userRSVPs.includes(walkId);
+  };
+
   const value = {
     currentWalk,
+    upcomingWalks,
     userPair,
     loading,
+    userRSVPs,
     createWalk,
     joinWalk,
     rotatePairs,
     checkIn,
+    rsvpForWalk,
+    cancelRSVP,
+    hasUserRSVPed,
   };
 
   return <WalkContext.Provider value={value}>{children}</WalkContext.Provider>;

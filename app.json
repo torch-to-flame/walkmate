@@ -10,13 +10,10 @@
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#ddd0c7"
     },
     "scheme": "walkmate",
-    "assetBundlePatterns": [
-      "**/*",
-      "assets/animations/*.lottie"
-    ],
+    "assetBundlePatterns": ["**/*", "assets/animations/*.lottie"],
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.michaeldawson.walkmate",

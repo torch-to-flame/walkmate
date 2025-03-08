@@ -26,6 +26,8 @@ export type Walk = {
   numberOfRotations: number;
   lastRotationTime?: Date;
   currentRotation: number;
+  rsvpUsers?: string[]; // Array of user IDs who have RSVPed
+  organizer?: string; // Name of the walk organizer
 };
 
 export type Pair = {
@@ -34,4 +36,19 @@ export type Pair = {
   color: string;
   number: number;
   isTriple?: boolean;
+};
+
+export type Reminder = {
+  id: string;
+  userId: string;
+  walkId: string;
+  type: 'day_before' | 'hour_before';
+  scheduledFor: Date;
+  sent: boolean;
+};
+
+export type RSVP = {
+  userId: string;
+  walkId: string;
+  timestamp: Date;
 };

@@ -1,4 +1,6 @@
+// We import this polyfill for getting crypto random values
 import 'react-native-get-random-values';
+
 import { registerRootComponent } from 'expo';
 import { ExpoRoot } from 'expo-router';
 
