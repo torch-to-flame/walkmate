@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "start": "expo start",
+    "start": "expo start --dev-client",
     "android": "expo run:android",
     "ios": "expo run:ios",
     "prebuild": "npx expo prebuild --clean",
@@ -13,7 +13,7 @@
     "demote-user:dev": "cd functions && NODE_ENV=development npm run set-admin-access:demote",
     "set-admin-access": "cd functions && npm run set-admin-access",
     "build:prune-artifacts": "scripts/prune-artifacts.sh",
-    "build:ios:production": "NODE_ENV=production eas build -p ios --local --profile production && npm run build:prune-artifacts",
+    "build:ios:production": "NODE_ENV=production eas build -p ios --local --profile production && npm run build:prune-artifacts"
   },
   "dependencies": {
     "@expo/vector-icons": "^14.0.4",
@@ -44,7 +44,8 @@
     "react-native-google-places-autocomplete": "^2.5.7",
     "react-native-safe-area-context": "^5.3.0",
     "react-native-screens": "^4.9.1",
-    "yup": "^1.6.1"
+    "yup": "^1.6.1",
+    "expo-updates": "~0.27.1"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",

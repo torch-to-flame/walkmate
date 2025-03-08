@@ -162,7 +162,7 @@ export default function SignUp() {
                       setLocation(data.description);
                     }}
                     query={{
-                      key: "YOUR_GOOGLE_PLACES_API_KEY",
+                      key: "AIzaSyCVRcp8LoR83nVd-ur3kEQ6MdOYMBevHhk",
                       language: "en",
                     }}
                     styles={{

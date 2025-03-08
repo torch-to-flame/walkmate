@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '../context/AuthContext';
+import { useRedirectIfSignedIn } from '../hooks/useRedirectIfSignedIn';
 
 export default function SignIn() {
   const [email, setEmail] = useState('');
@@ -11,6 +12,9 @@ export default function SignIn() {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
   const { signIn } = useAuth();
+
+  // This will automatically redirect to /(tabs) if the user is already signed in
+  useRedirectIfSignedIn();
 
   const handleSignIn = async () => {
     if (!email || !password) {
@@ -21,7 +25,8 @@ export default function SignIn() {
     try {
       setLoading(true);
       await signIn(email, password);
-      router.replace('/');
+      // After successful sign-in, redirect to the main app
+      router.replace('/(tabs)');
     } catch (error) {
       Alert.alert('Error', 'Failed to sign in. Please check your credentials.');
       console.error(error);

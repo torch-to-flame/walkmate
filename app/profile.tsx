@@ -17,10 +17,18 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "../context/AuthContext";
 import { useFlashMessage } from "../context/FlashMessageContext";
+import { useUpdates } from "../context/UpdatesContext";
 
 export default function ProfileScreen() {
   const { user, loading, refreshToken, signOut, updateUserProfile } = useAuth();
   const { showMessage } = useFlashMessage();
+  const { 
+    checkForUpdate, 
+    isCheckingForUpdate, 
+    updateAvailable, 
+    applyUpdate, 
+    isApplyingUpdate 
+  } = useUpdates();
   const [name, setName] = useState(user?.name || "");
   const [aboutMe, setAboutMe] = useState(user?.aboutMe || "");
   const [profilePicUrl, setProfilePicUrl] = useState(user?.profilePicUrl || "");
@@ -32,15 +40,18 @@ export default function ProfileScreen() {
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
     try {
+      // First refresh the token
       await refreshToken();
-      // No need for additional message as refreshToken already shows one
+      
+      // Then check for updates
+      await checkForUpdate();
     } catch (error) {
-      // Error handling is done inside refreshToken
-      console.error("Error refreshing token:", error);
+      // Error handling is done inside the functions
+      console.error("Error during refresh:", error);
     } finally {
       setRefreshing(false);
     }
-  }, [refreshToken]);
+  }, [refreshToken, checkForUpdate]);
 
   const pickImage = async () => {
     try {
@@ -146,16 +157,33 @@ export default function ProfileScreen() {
         contentContainerStyle={styles.contentContainer}
         refreshControl={
           <RefreshControl
-            refreshing={refreshing}
+            refreshing={refreshing || isCheckingForUpdate}
             onRefresh={onRefresh}
             colors={["#4285F4"]}
             tintColor="#4285F4"
-            title="Pull to refresh token"
+            title="Pull to refresh & check for updates"
             titleColor="#4285F4"
           />
         }
       >
         <StatusBar style="auto" />
+
+        {updateAvailable && (
+          <View style={styles.updateBanner}>
+            <Text style={styles.updateText}>Update available!</Text>
+            <TouchableOpacity
+              style={[styles.button, styles.updateButton, isApplyingUpdate && styles.disabledButton]}
+              onPress={applyUpdate}
+              disabled={isApplyingUpdate}
+            >
+              {isApplyingUpdate ? (
+                <ActivityIndicator size="small" color="#fff" />
+              ) : (
+                <Text style={styles.buttonText}>Restart & Update</Text>
+              )}
+            </TouchableOpacity>
+          </View>
+        )}
 
         <View style={styles.profileImageContainer}>
           <TouchableOpacity onPress={pickImage}>
@@ -256,6 +284,26 @@ const styles = StyleSheet.create({
     color: "#666",
     marginBottom: 20,
     textAlign: "center",
+  },
+  updateBanner: {
+    backgroundColor: "#d1ecf1",
+    padding: 15,
+    borderRadius: 8,
+    marginBottom: 20,
+    flexDirection: "column",
+    alignItems: "center",
+    borderLeftWidth: 5,
+    borderLeftColor: "#17a2b8",
+  },
+  updateText: {
+    fontSize: 16,
+    fontWeight: "bold",
+    color: "#0c5460",
+    marginBottom: 10,
+  },
+  updateButton: {
+    backgroundColor: "#17a2b8",
+    width: "100%",
   },
   profileImageContainer: {
     alignItems: "center",

@@ -102,7 +102,7 @@ export default function EditWalkScreen() {
         submitButtonText="Update Walk"
         onCancel={() => router.back()}
         showActiveToggle={true}
-        googleApiKey="AIzaSyCVRcp8LoR83nVd-ur3kEQ6MdOYMBevHhk"
+        googleApiKey={process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY}
       />
     </ScrollView>
   );

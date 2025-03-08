@@ -62,7 +62,7 @@ export default function NewWalkScreen() {
         onSubmit={handleSubmit}
         submitButtonText="Create Walk"
         onCancel={() => router.back()}
-        googleApiKey="AIzaSyCVRcp8LoR83nVd-ur3kEQ6MdOYMBevHhk"
+        googleApiKey={process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY}
       />
     </ScrollView>
   );
